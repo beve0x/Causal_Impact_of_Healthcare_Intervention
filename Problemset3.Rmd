@@ -1,0 +1,180 @@
+---
+title: FIN550_Case_Study
+output: html_document
+date: "2023-11-09"
+Names: Siyu Wu, Siri Maddala, Krish G
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(tidyverse)
+```
+
+## Including Plots
+
+```{r pressure, echo=FALSE}
+# loading the data
+claims <- read.csv("claims.csv")
+nrow(claims)
+head(claims)
+```
+```{r}
+# question 4
+# Define expenditure variables
+lm_resultHosp <- lm(spendHosp_0715_0716 ~ treat, data = claims)
+lm_resultOff <- lm(spendOff_0715_0716  ~ treat, data = claims)
+lm_resultRx <- lm(spendRx_0715_0716 ~ treat, data = claims)
+lm_result <- lm(spend_0715_0716 ~ treat, data = claims)
+lm_resultcovg <- lm(covg_0715_0716 ~ treat, data=claims )
+print(lm_resultHosp)
+print(lm_resultOff)
+print(lm_resultRx)
+print(lm_result)
+print(lm_resultcovg)
+
+```
+```{r}
+# question 4
+#Extract information from each regression
+summary_data_Hosp <- summary(lm_resultHosp)$coefficients[2, c("Estimate", "Pr(>|t|)")]
+summary_data_Off <- summary(lm_resultOff)$coefficients[2, c("Estimate", "Pr(>|t|)")]
+summary_data_Rx <- summary(lm_resultRx)$coefficients[2, c("Estimate", "Pr(>|t|)")]
+summary_data <- summary(lm_result)$coefficients[2, c("Estimate", "Pr(>|t|)")]
+summary_data_covg <- summary(lm_resultcovg)$coefficients[2, c("Estimate", "Pr(>|t|)")]
+
+print(summary_data_Hosp)
+print(summary_data_Off)
+print(summary_data_Rx)
+print(summary_data)
+print(summary_data_covg)
+```
+```{r}
+# question 4
+#Calculate the treatment and control group mean and display the information neatly
+results_df <- data.frame(
+  Variable_Description = c("spendHosp_0715_0716", "spendOff_0715_0716", "spendRx_0715_0716", "spend_0715_0716", "covg_0715_0716"),
+  Control_Group_Mean = c(
+    mean(claims$spendHosp_0715_0716[claims$treat == 0], na.rm = TRUE),
+    mean(claims$spendOff_0715_0716[claims$treat == 0], na.rm = TRUE),
+    mean(claims$spendRx_0715_0716[claims$treat == 0], na.rm = TRUE),
+    mean(claims$spend_0715_0716[claims$treat == 0], na.rm = TRUE),
+    mean(claims$covg_0715_0716[claims$treat == 0], na.rm = TRUE)
+  ),
+  Treatment_Group_Mean = c(
+    mean(claims$spendHosp_0715_0716[claims$treat == 1], na.rm = TRUE),
+    mean(claims$spendOff_0715_0716[claims$treat == 1], na.rm = TRUE),
+    mean(claims$spendRx_0715_0716[claims$treat == 1], na.rm = TRUE),
+    mean(claims$spend_0715_0716[claims$treat == 1], na.rm = TRUE),
+    mean(claims$covg_0715_0716[claims$treat == 1], na.rm = TRUE)
+  ),
+  P_Value = c(
+    summary_data_Hosp["Pr(>|t|)"],
+    summary_data_Off["Pr(>|t|)"],
+    summary_data_Rx["Pr(>|t|)"],
+    summary_data["Pr(>|t|)"],
+    summary_data_covg["Pr(>|t|)"]
+  )
+)
+print(results_df)
+
+
+
+```
+
+
+```{r}
+# question 5
+# Define outcome variables
+outcome_variables <- c("spendHosp_0816_0717", "spendOff_0816_0717", "spendRx_0816_0717", "spend_0816_0717","covg_0816_0717")
+
+# Initialize an empty list to store results
+results_list <- list()
+
+# Perform linear regression for each outcome variable
+for (outcome_var in outcome_variables) {
+  # Without demographic controls
+  lm_result_no_controls <- lm(paste(outcome_var, " ~ treat", sep = ""), data = claims)
+  summary_no_controls <- summary(lm_result_no_controls)$coefficients[2, c("Estimate", "Std. Error")]
+
+  # With demographic controls
+  lm_result_with_controls <- lm(paste(outcome_var, " ~ treat + male + white + age37_49 + age50", sep = ""), data = claims)
+  summary_with_controls <- summary(lm_result_with_controls)$coefficients[2, c("Estimate", "Std. Error")]
+
+  # Create a data frame for each outcome variable
+  result_df <- data.frame(
+    Variable_Description = outcome_var,
+    Estimate_No_Controls = summary_no_controls["Estimate"],
+    Std_Error_No_Controls = summary_no_controls["Std. Error"],
+    Estimate_With_Controls = summary_with_controls["Estimate"],
+    Std_Error_With_Controls = summary_with_controls["Std. Error"]
+  )
+
+  # Append the result to the list
+  results_list[[outcome_var]] <- result_df
+}
+
+# Combine the list of data frames into a single data frame
+results <- do.call(rbind, results_list)
+
+# Print the results
+print(results)
+
+```
+```{r}
+# question 6
+# Define outcome variables
+outcome_variables <- c("spendHosp_0816_0717", "spendOff_0816_0717", "spendRx_0816_0717", "spend_0816_0717","covg_0816_0717")
+
+# Define demographic control variables
+demographic_controls <- c("male", "white", "age37_49", "age50")
+
+# Define the participation variable
+participation_var <- "hra_c_yr1"
+
+# Initialize an empty data frame to store results
+results <- data.frame(
+  Variable_Description = character(),
+  Estimate_No_Controls = character(),
+  Std_Error_No_Controls = character(),
+  Estimate_With_Controls = character(),
+  Std_Error_With_Controls = character()
+)
+
+# Perform linear regression for each outcome variable
+for (outcome_var in outcome_variables) {
+  # Without demographic controls
+  lm_result_no_controls <- lm(paste(outcome_var, " ~ ", participation_var, sep = ""), data = claims)
+  summary_no_controls <- summary(lm_result_no_controls)$coefficients[2, c("Estimate", "Std. Error")]
+
+  # With demographic controls
+  lm_result_with_controls <- lm(paste(outcome_var, " ~ ", participation_var, " + ", paste(demographic_controls, collapse = " + "), sep = ""), data = claims)
+  summary_with_controls <- summary(lm_result_with_controls)$coefficients[2, c("Estimate", "Std. Error")]
+
+  # Append the result to the data frame
+  results <- rbind(
+    results,
+    data.frame(
+      Variable_Description = outcome_var,
+      Estimate_No_Controls = round(summary_no_controls["Estimate"], 4),
+      Std_Error_No_Controls = round(summary_no_controls["Std. Error"], 4),
+      Estimate_With_Controls = round(summary_with_controls["Estimate"], 4),
+      Std_Error_With_Controls = round(summary_with_controls["Std. Error"], 4)
+    )
+  )
+}
+
+# Print the results
+print(results)
+
+```
+
+
